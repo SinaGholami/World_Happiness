@@ -11,16 +11,12 @@ df_latest <- happiness_data |>
   slice_max(order_by = year, n = 138, with_ties = FALSE) |>
   ungroup()
 
-# Map continents (for boxplot)
+# Map continents
 df_latest <- df_latest |>
   mutate(continent = countrycode(`Country name`, "country.name", "continent"))
 
 df_clean <- df_latest |>
   drop_na(`Log GDP per capita`, `Life Ladder`)
-
-
-outdir <- "outputs_happiness"
-if (!dir.exists(outdir)) dir.create(outdir)
 
 stats <- df_clean |>
   summarise(
@@ -36,7 +32,7 @@ median_x <- stats$median
 p25_x    <- stats$p25
 p75_x    <- stats$p75
 n_c      <- stats$n
-# Pretty histogram with density + annotations
+# histogram with density + annotations
 p_dist <- ggplot(df_clean, aes(x = `Life Ladder`)) +
   # histogram in density scale for nicer overlay
   geom_histogram(aes(y = after_stat(density)),
@@ -66,9 +62,8 @@ p_dist <- ggplot(df_clean, aes(x = `Life Ladder`)) +
 print(p_dist)
 ggsave(file.path(outdir, "01_distribution_happiness.png"), p_dist, width = 8, height = 5, dpi = 150)
 
-# ============================
-# 5) PLOT 2 — GDP vs Happiness (scatter + trend)
-# ============================
+# PLOT 2 — GDP vs Happiness (scatter + trend)
+
 # Pearson correlation for annotation
 cor_val <- cor(df_clean$`Log GDP per capita`, df_clean$`Life Ladder`, use = "complete.obs")
 
@@ -86,9 +81,9 @@ p_scatter <- ggplot(df_clean, aes(x = `Log GDP per capita`, y = `Life Ladder`)) 
 print(p_scatter)
 ggsave(file.path(outdir, "02_scatter_gdp_vs_happiness.png"), p_scatter, width = 8, height = 6, dpi = 150)
 
-# ============================
-# 6) PLOT 3 — Happiness by Continent (boxplot)
-# ============================
+
+# PLOT 3 — Happiness by Continent (boxplot)
+
 p_box <- df_clean |>
   filter(!is.na(continent)) |>
   ggplot(aes(x = continent, y = `Life Ladder`, fill = continent)) +
@@ -109,9 +104,9 @@ p_box <- df_clean |>
 print(p_box)
 ggsave(file.path(outdir, "03_boxplot_continent_pretty.png"), p_box, width = 8, height = 5, dpi = 150)
 
-# ============================
-# 7) PLOT 4 — Correlation heatmap (selected variables)
-# ============================
+
+# PLOT 4 — Correlation heatmap (selected variables)
+
 corr_vars <- df_clean |>
   select(`Life Ladder`,
          `Log GDP per capita`,
@@ -130,9 +125,9 @@ p_heat <- ggcorrplot(corr_mat, method = c("square"), ggtheme = theme_minimal(),
 print(p_heat)
 ggsave(file.path(outdir, "04_correlation_heatmap.png"), p_heat, width = 7.5, height = 6.5, dpi = 150)
 
-# ============================
-# 8) MODEL — Linear regression (standardized coeffs)
-# ============================
+
+# MODEL — Linear regression (standardized coeffs)
+
 # Build a clean modeling frame
 model_df <- df_clean |>
   select(`Life Ladder`,
@@ -170,17 +165,3 @@ p_coef <- model_tidy |>
   theme(plot.title = element_text(hjust = 0.5, face = "bold"))
 print(p_coef)
 ggsave(file.path(outdir, "05_coefficients_bar.png"), p_coef, width = 8, height = 6, dpi = 150)
-
-# ============================
-# 9) Bonus — Pick best-covered single year (optional)
-# ============================
-# Uncomment to use a single year with the most countries and re-run plots above:
-# coverage <- happiness_data %>%
-#   group_by(year) %>%
-#   summarise(n = sum(!is.na(`Life Ladder`) & !is.na(`Log GDP per capita`))) %>%
-#   arrange(desc(n))
-# print(coverage)
-# best_year <- coverage$year[1]
-# df_year <- happiness_data %>%
-#   filter(year == best_year) %>%
-#   distinct(`Country name`, .keep_all = TRUE)
